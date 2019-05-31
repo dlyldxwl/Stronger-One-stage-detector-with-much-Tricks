@@ -8,7 +8,7 @@ I would test popular training tricks as many as I can for improving one-stage de
 
 **Test data** :  VOC07 test
 
-**GPU** :  TITAN X(pascal)
+**GPU** :  TITAN X (pascal)
 
 **Framework** :  Pytorch 0.4
 
@@ -20,4 +20,4 @@ YOLOV3 544| - | - | -
 **Note**:
 
 - [ ] Stronger YOLOv3 with much tricks will be released soon.
-- [ ] This repo does not use multi-scale train because of the limitation of GPU memory (I only have one card), which is extremely beneficial to detector.
+- [ ] This repo does not use **multi-scale train** because of the limitation of GPU memory (I only have one card), which is extremely beneficial to detector.
