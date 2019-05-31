@@ -5,8 +5,11 @@ This repo was inspired by the paper [Bag of Freebies for Training Object Detecti
 I would test popular training tricks as many as I can for improving one-stage detector accuarcy, feel free to leave a comment or email me about the tricks you want me to test ([yhao.chen0617@gmail.com](yhao.chen0617@gmail.com)).
 
 **Traing Data** :  VOC0712 trainval
+
 **Test data** :  VOC07 test
+
 **GPU** :  TITAN X(pascal)
+
 **Framework** :  Pytorch 0.4
 
 Network | mAP | FPS | Parameter
