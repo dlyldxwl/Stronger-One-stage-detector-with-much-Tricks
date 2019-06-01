@@ -55,7 +55,7 @@ class MultiBoxLoss(nn.Module):
         self.softmax_focal = False # using OHEM, CEWithsoftmax and Focal loss
         self.sigmoid_focal = False # Original Focal loss(Using sigmoid with CE)
         if self.focal_loss:
-            self.sigmoid_focal = True
+            self.softmax_focal = True
         if self.sigmoid_focal:
             self.alpha = 0.25
             self.gamma = 2.0
@@ -119,7 +119,7 @@ class MultiBoxLoss(nn.Module):
 
         if self.giou:
             prior_giou = point_form(priors)  # [x,y,h,w]->[x0,y0,x1,y1]
-            prior_giou = prior_giou.unsqueeze(0).expand_as(loc_t)
+            prior_giou = prior_giou.unsqueeze(0).expand(num, num_priors, 4)
             prior_giou = prior_giou[pos_idx].view(-1, 4)
             reg_loss = GIoUloss()
             loss_l = reg_loss(loc_p, prior_giou, loc_t)
@@ -134,6 +134,7 @@ class MultiBoxLoss(nn.Module):
 
         # Confidence Loss
         if self.sigmoid_focal:
+            # if use original focal loss, please modify the output of the test in models/SSD.py to the sigmoid
             batch_conf = conf_data.view(-1, self.num_classes)
             label_onehot = batch_conf.clone().zero_().scatter(1, conf_t.view(-1,1), 1)
             alpha = self.alpha * label_onehot + (1 - self.alpha) * (1 - label_onehot)
