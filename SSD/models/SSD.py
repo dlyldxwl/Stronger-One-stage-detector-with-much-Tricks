@@ -118,8 +118,8 @@ class SSD(nn.Module):
         if test:
             output = (
                 loc.view(loc.size(0), -1, 4),  # loc preds
-                # self.softmax(conf.view(-1, self.num_classes)),  # conf preds
-                torch.sigmoid(conf.view(-1, self.num_classes))
+                self.softmax(conf.view(-1, self.num_classes)),  # conf preds
+                # torch.sigmoid(conf.view(-1, self.num_classes))
             )
         else:
             output = (
