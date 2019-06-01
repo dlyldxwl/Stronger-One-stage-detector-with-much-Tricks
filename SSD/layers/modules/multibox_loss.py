@@ -118,8 +118,8 @@ class MultiBoxLoss(nn.Module):
         loc_t = loc_t[pos_idx].view(-1,4)
 
         if self.giou:
-            prior_giou = point_form(priors)  # [x,y,h,w]->[x0,y0,x1,y1]
-            prior_giou = prior_giou.unsqueeze(0).expand(num, num_priors, 4)
+            # prior_giou = point_form(priors)  # [x,y,h,w]->[x0,y0,x1,y1]
+            prior_giou = priors.unsqueeze(0).expand(num, num_priors, 4)
             prior_giou = prior_giou[pos_idx].view(-1, 4)
             reg_loss = GIoUloss()
             loss_l = reg_loss(loc_p, prior_giou, loc_t)
