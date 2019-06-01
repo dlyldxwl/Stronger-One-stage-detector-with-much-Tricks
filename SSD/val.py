@@ -21,7 +21,7 @@ from utils.timer import Timer
 
 def val_net(priors,save_val_folder,testset,num_classes,net,detector,transform,max_per_image,thresh,cuda):
     if not os.path.exists(save_val_folder):
-        os.mkdir(save_val_folder)
+        os.makedirs(save_val_folder)
         # dump predictions and assoc. ground truth to text file for now
     num_images = len(testset)
 
