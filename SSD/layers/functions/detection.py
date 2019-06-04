@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.autograd import Function
 from torch.autograd import Variable
-from utils.box_utils import decode
+from utils.box_utils import decode, point_form
 
 
 class Detect(Function):
@@ -12,11 +12,12 @@ class Detect(Function):
     scores and threshold to a top_k number of output predictions for both
     confidence score and locations.
     """
-    def __init__(self, num_classes, bkg_label, cfg):
+    def __init__(self, num_classes, bkg_label, cfg, GIOU=False):
         self.num_classes = num_classes
         self.background_label = bkg_label
 
         self.variance = cfg['variance']
+        self.giou = GIOU
 
     def forward(self, predictions, prior):
         """
@@ -47,17 +48,22 @@ class Detect(Function):
             conf_preds = conf_data.unsqueeze(0)
 
         else:
-            conf_preds = conf_data.view(num, num_priors,
+            conf_preds = conf_data.view(num, self.num_priors,
                                         self.num_classes)
             self.boxes.expand_(num, self.num_priors, 4)
             self.scores.expand_(num, self.num_priors, self.num_classes)
 
         # Decode predictions into bboxes.
         for i in range(num):
-            decoded_boxes = decode(loc_data[i], prior_data, self.variance)
+            if self.giou:
+                p = decode(loc_data[i], prior_data, self.variance)
+                decoded_boxes = torch.stack([torch.min(p[:,0],p[:,2]), torch.min(p[:,1],p[:,3]), torch.max(p[:,0],p[:,2]), torch.max(p[:,1],p[:,3])],1)
+            else:
+                decoded_boxes = decode(loc_data[i], prior_data, self.variance)
             conf_scores = conf_preds[i].clone()
 
             self.boxes[i] = decoded_boxes
             self.scores[i] = conf_scores
 
         return self.boxes, self.scores
+
