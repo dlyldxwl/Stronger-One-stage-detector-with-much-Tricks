@@ -18,8 +18,7 @@ from utils.nms_wrapper import nms
 from utils.timer import Timer
 
 
-
-def val_net(priors,save_val_folder,testset,num_classes,net,detector,transform,max_per_image,thresh,cuda):
+def val_net(priors,save_val_folder,testset,num_classes,net,detector,transform,max_per_image,thresh,cuda,vgg_bn):
     if not os.path.exists(save_val_folder):
         os.makedirs(save_val_folder)
         # dump predictions and assoc. ground truth to text file for now
@@ -30,13 +29,6 @@ def val_net(priors,save_val_folder,testset,num_classes,net,detector,transform,ma
 
     _t = {'im_detect': Timer(), 'misc': Timer()}
     det_file = os.path.join(save_val_folder, 'detections.pkl')
-
-    # if args.retest:
-    #     f = open(det_file, 'rb')
-    #     all_boxes = pickle.load(f)
-    #     print('Evaluating detections')
-    #     testset.evaluate_detections(all_boxes, save_folder)
-    #     return
 
     for i in range(num_images):
         img = testset.pull_image(i)
@@ -49,7 +41,7 @@ def val_net(priors,save_val_folder,testset,num_classes,net,detector,transform,ma
                 scale = scale.cuda()
 
         _t['im_detect'].tic()
-        out = net(x,test='True')  # forward pass
+        out = net(x,vgg_bn=vgg_bn,test='True')  # forward pass
         boxes, scores = detector.forward(out, priors)
         detect_time = _t['im_detect'].toc()
         boxes = boxes[0]
@@ -73,7 +65,7 @@ def val_net(priors,save_val_folder,testset,num_classes,net,detector,transform,ma
                 np.float32, copy=False)
 
             keep = nms(c_dets, 0.45, force_cpu=False)
-            #keep = keep[:40]
+            # keep = keep[:40]
             c_dets = c_dets[keep, :]
             all_boxes[j][i] = c_dets
         if max_per_image > 0:
@@ -101,3 +93,4 @@ def val_net(priors,save_val_folder,testset,num_classes,net,detector,transform,ma
 
 if __name__ == "__main__":
     pass
+

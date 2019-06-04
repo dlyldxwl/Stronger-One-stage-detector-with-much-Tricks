@@ -14,7 +14,7 @@ I would test popular training tricks as many as I can for improving one-stage de
 
 Network | mAP | FPS | Parameter
 --|:--:|:--:|:--:
-SSD 300| 79.62 | ~100| -
+SSD 300| 80.58 | ~100| -
 YOLOV3 544| - | - | - 
 
 **Note**:

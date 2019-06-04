@@ -26,7 +26,7 @@ Pretrained model is VGG-16 (atrous). The size of all models is 300&times;300.
 
 ## Note
 
-- [ ] 79.62 is not the final resualt. The experiment of SSD300 with Focal loss, GIoU and Octconv is still going on. 
+- [ ] 80.58 is not the final resualt. The experiment of SSD300 with Focal loss, GIoU and Octconv is still going on. 
 
 - [ ] BN can merge into convolution layer, thus it will not increase any inference time and parameters. The merge code will be pubilc soon.
 

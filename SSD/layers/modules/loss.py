@@ -94,7 +94,8 @@ class GIoUloss(nn.Module):
         assert priors.shape == predict.shape == target.shape, "GIoU loss ERROR!"
 
         p = decode(predict, priors, variance)
-        loss = 1 - self._GIoU(p, target)
+        p_n = torch.stack([torch.min(p[:,0],p[:,2]), torch.min(p[:,1],p[:,3]), torch.max(p[:,0],p[:,2]), torch.max(p[:,1],p[:,3])],1)
+        loss = 1 - self._GIoU(p_n, target)
         if self.size_average:
             return loss.mean()
         else:

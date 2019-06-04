@@ -17,14 +17,12 @@ from layers.functions import PriorBox,Detect
 import time
 import math
 from val import val_net
-import threading
-lock = threading.Lock()
 
 parser = argparse.ArgumentParser(description='SSD Training')
 parser.add_argument('-v', '--version', default='SSD', help='version.')
 parser.add_argument('-s', '--size', default='300', help='300 or 512 input size.')
 parser.add_argument('-d', '--dataset', default='VOC', help='VOC or COCO dataset')
-parser.add_argument('--basenet', default='./weights/vgg16_reducedfc.pth', help='pretrained base model')
+parser.add_argument('--basenet', default='vgg16_bn.pth', help='pretrained base model')
 parser.add_argument('--jaccard_threshold', default=0.5, type=float, help='Min Jaccard index for matching')
 parser.add_argument('-b', '--batch_size', default=32, type=int, help='Batch size for training')
 parser.add_argument('--num_workers', default=8, type=int, help='Number of workers used in dataloading')
@@ -32,8 +30,8 @@ parser.add_argument('--cuda', default=True, type=bool, help='Use cuda to train m
 parser.add_argument('--ngpu', default=1, type=int, help='gpus')
 parser.add_argument('--lr', '--learning-rate', default=4e-3, type=float, help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
-parser.add_argument( '--resume_net', default="weights/SSD_VOC_epoches_20.pth", help='resume net for retraining')
-parser.add_argument('--resume_epoch', default=20, type=int, help='resume iter for retraining')
+parser.add_argument( '--resume_net', default=None, help='resume net for retraining')
+parser.add_argument('--resume_epoch', default=0, type=int, help='resume iter for retraining')
 parser.add_argument('-max','--max_epoch', default=250, type=int, help='max epoch for retraining')
 parser.add_argument('--weight_decay', default=5e-4, type=float, help='Weight decay for SGD')
 parser.add_argument('--gamma', default=0.1, type=float, help='Gamma update for SGD')
@@ -48,8 +46,10 @@ parser.add_argument('--label_smooth', default=False, type=bool,
                     help='Label Smooth for cls task, default label_pos=0.9.Please refer layers/modules/multibox_loss.py')
 parser.add_argument('--balance_l1', default=False, type=bool, help='Balanced for SmoothL1, refer to Libra R-CNN')
 parser.add_argument('--random_erasing', default=True, type=bool, help='Random Erasing for Data Augmentation')
-parser.add_argument('--focal_loss', default=True, type=bool, help='Focal Loss')
+parser.add_argument('--focal_loss', default=False, type=bool, help='Focal Loss')
 parser.add_argument('--alpha', default=0, type=float, help='Mixup for SSD, if alpha is zero, not use Mixup')
+parser.add_argument('--giou', default=False, type=bool, help='GIOU for reg loss')
+parser.add_argument('--vgg_bn', default=True, type=bool, help='Use VGG16_BN as backbone for training')
 args = parser.parse_args()
 
 
@@ -77,12 +77,15 @@ weight_decay = args.weight_decay
 gamma = args.gamma
 momentum = args.momentum
 
-net = build_net(img_dim, num_classes,args.norm)
+net = build_net(img_dim, num_classes,args.norm,args.vgg_bn)
 print(net)
 if not args.resume_net:
     base_weights = torch.load(args.basenet)
     print('Loading base network...')
-    net.base.load_state_dict(base_weights)
+    if args.vgg_bn:
+        net.base[:-5].load_state_dict(base_weights)
+    else:
+        net.base.load_state_dict(base_weights)
 
     def weights_init(m):
         for key in m.state_dict():
@@ -106,6 +109,8 @@ if not args.resume_net:
 
     print('Initializing weights...')
     # initialize newly added layers' weights with kaiming_normal method
+    if args.vgg_bn:
+        net.base[-5:].apply(weights_init)
     net.extras.apply(weights_init)
 
 else:
@@ -146,7 +151,7 @@ else:
     optimizer = optim.SGD(net.parameters(), lr=args.lr,momentum=args.momentum, weight_decay=args.weight_decay)
 
 criterion = MultiBoxLoss(num_classes, 0.5, True, 0, True, 3, 0.5, False,label_smmooth=args.label_smooth,balance_l1=args.balance_l1,
-                         focal_loss=args.focal_loss)
+                         focal_loss=args.focal_loss,giou=args.giou)
 
 priorbox = PriorBox(cfg)
 with torch.no_grad():
@@ -226,7 +231,7 @@ def train():
                 torch.save(net.state_dict(), args.save_folder+args.version+'_'+args.dataset + '_epoches_'+ repr(epoch) + '.pth')
                 if (epoch!=args.resume_epoch):
                 #if(epoch):
-                    ValNet = build_net(img_dim, num_classes, args.norm)
+                    ValNet = build_net(img_dim, num_classes, args.norm, args.vgg_bn)
                     val_state_dict = torch.load(args.save_folder + args.version + '_' + args.dataset + '_epoches_' + repr(epoch) + '.pth')
                     from collections import OrderedDict
                     new_state_dict = OrderedDict()
@@ -250,11 +255,11 @@ def train():
                     else:
                         ValNet = ValNet.cpu()
                     top_k = 200
-                    detector = Detect(num_classes, 0, cfg)
+                    detector = Detect(num_classes, 0, cfg, GIOU=args.giou)
                     save_val_folder = os.path.join(args.save_val_folder, args.dataset)
                     val_transform = BaseTransform(ValNet.size, rgb_means, (2, 0, 1))
                     val_net(priors, save_val_folder, testset, num_classes, ValNet, detector, val_transform, top_k, 0.01,
-                            args.cuda)
+                            args.cuda,args.vgg_bn)
             epoch += 1
 
         load_t0 = time.time()
@@ -274,7 +279,7 @@ def train():
 
         # fh = net.base[22].register_forward_hook(get_features_hook)
         # bh = net.base[22].register_backward_hook(get_grads_hook)
-        out = net(images)
+        out = net(images,vgg_bn=args.vgg_bn)
         optimizer.zero_grad()
         loss_l, loss_c, = criterion(out, priors, targets)
         loss = loss_l + loss_c
@@ -321,3 +326,4 @@ def adjust_learning_rate(optimizer, gamma, epoch, step_index, iteration, epoch_s
 
 if __name__ == '__main__':
     train()
+

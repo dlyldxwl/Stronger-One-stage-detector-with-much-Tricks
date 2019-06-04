@@ -13,7 +13,7 @@ def vgg(cfg, i, batch_norm=False):
             if not batch_norm:
                 conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
             else:
-                conv2d = BasicConv(in_channels, v, kernel_size=3, padding=1,relu=False, bn=batch_norm)
+                conv2d = BasicConv(in_channels, v, kernel_size=3, padding=1,relu=False, bn=batch_norm, bias=True)
             layers += [conv2d,nn.ReLU(inplace=True)]
             in_channels = v
     pool5 = nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
@@ -36,9 +36,8 @@ vgg_base = {
 class BasicConv(nn.Module):
 
     def __init__(self, in_planes, out_planes, kernel_size, stride=1, padding=0, dilation=1, groups=1, relu=True,
-                 bn=True):
+                 bn=True, bias=False):
         super(BasicConv, self).__init__()
-        bias = not bn
         self.out_channels = out_planes
         self.conv = nn.Conv2d(in_planes, out_planes, kernel_size=kernel_size, stride=stride, padding=padding,
                               dilation=dilation, groups=groups, bias=bias)

@@ -68,7 +68,7 @@ class SSD(nn.Module):
 
         self.softmax = nn.Softmax()
 
-    def forward(self, x, test=False):
+    def forward(self, x, vgg_bn=False,test=False):
         """Applies network layers and ops on input image(s) x.
 
         Args:
@@ -95,7 +95,10 @@ class SSD(nn.Module):
         for k in range(23):
             x = self.base[k](x)
 
-        x1 = self.Norm(x)
+        if vgg_bn:
+            x1 = x
+        else:
+            x1 = self.Norm(x)
         source_features.append(x1)
 
         # apply vgg up to fc7
@@ -190,10 +193,11 @@ fea_channels = {
     '512': [512, 512, 256, 256, 256, 256, 256]}
 
 
-def build_net(size=300, num_classes=21, norm="BN"):
+def build_net(size=300, num_classes=21, norm="BN",vgg_bn=False):
     if size != 300 and size != 512:
         print("Error: Sorry only FSSD300 and FSSD512 is supported currently!")
         return
 
-    return SSD(base=vgg(vgg_base[str(size)], 3, batch_norm=False),extras=add_extras(size,norm),head=multibox(fea_channels[str(size)], mbox[str(size)], num_classes),
+    return SSD(base=vgg(vgg_base[str(size)], 3, batch_norm=vgg_bn),extras=add_extras(size,norm),head=multibox(fea_channels[str(size)], mbox[str(size)], num_classes),
                num_classes=num_classes, size=size, norm=norm)
+
